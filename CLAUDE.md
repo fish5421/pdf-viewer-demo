@@ -38,10 +38,10 @@ If `feature_list.json` does NOT exist, you are the **Initializer Agent**. Your j
    - Analyze README.md and existing code
    - Generate comprehensive, granular, testable features
    - Each feature must have:
-     - `id`: Unique number
+     - `id`: Unique string identifier (e.g., "core.pdf-loads")
      - `category`: "core" | "annotation" | "ui" | "integration"
      - `description`: What the feature does (user-facing behavior)
-     - `steps`: Array of verification steps (how to test it)
+     - `steps`: Array of natural language verification steps
      - `passes`: `false` (ALL start as false)
    - Use JSON format (not Markdown) - this prevents accidental edits
 
@@ -78,33 +78,28 @@ If `feature_list.json` EXISTS, you are a **Coding Agent**. Your job is to make i
 
 3. **Start browser and run fundamental integration test**
    ```bash
-   # Start Chrome with remote debugging
    browser start
-
-   # Navigate to app
    browser nav http://localhost:5173
-
-   # Wait briefly for PDF engine to load, then take screenshot
    sleep 3
    browser screenshot
    ```
-   - Verify PDF loads and basic interaction works (check screenshot)
+   - View the screenshot to verify PDF loads and basic UI works
    - **If broken: FIX THIS FIRST** before any new work
 
 4. **Read feature list and select work**
    ```bash
-   cat feature_list.json | jq '.features[] | select(.passes == false) | {id, category, description}' | head -20
+   cat feature_list.json | jq '.features[] | select(.passes == false) | {id, description}' | head -10
    ```
    - Choose ONE feature with `"passes": false`
    - Pick the highest-priority incomplete feature
-   - Features should generally be completed in order (core → annotation → ui → integration)
+   - Features should generally be completed in order (core → ui → annotation → integration)
 
 ### Work Protocol:
 
 - **ONE FEATURE AT A TIME** - Do not attempt multiple features in a single session
-- **Test thoroughly** - Use `browser` CLI for end-to-end verification (see [Browser CLI Testing](#browser-cli-testing))
-- **Only mark `passes: true`** after careful testing confirms the feature works as a user would experience it
-- **Commit after each completed feature** - Small, atomic commits with descriptive messages
+- **Test using natural language interpretation** - See [Feature Testing Workflow](#feature-testing-workflow)
+- **Only mark `passes: true`** after careful testing confirms the feature works
+- **Commit after each completed feature**
 
 ### Session Cleanup (MANDATORY):
 
@@ -126,7 +121,84 @@ Before ending ANY session:
    - No half-implemented features
    - No broken builds
    - No undocumented changes
-   - Code should be mergeable to main
+
+---
+
+## Feature Testing Workflow
+
+Features have natural language steps. You interpret each step and use the `browser` CLI to verify.
+
+### Example: Testing "core.pdf-loads"
+
+**Feature definition:**
+```json
+{
+  "id": "core.pdf-loads",
+  "description": "PDF loads and displays from remote URL",
+  "steps": [
+    "Navigate to http://localhost:5173",
+    "Wait for the PDF engine to finish loading",
+    "Verify PDF content is visible on screen",
+    "Verify at least one page of the PDF is rendered"
+  ]
+}
+```
+
+**How to test (interpret each step):**
+
+**Step 1: "Navigate to http://localhost:5173"**
+```bash
+browser nav http://localhost:5173
+```
+
+**Step 2: "Wait for the PDF engine to finish loading"**
+```bash
+# Check if loading message is gone
+browser eval "document.body.innerText.includes('Loading')"
+# If true, wait and check again. If false, loading is complete.
+```
+
+**Step 3: "Verify PDF content is visible on screen"**
+```bash
+browser screenshot
+# View the screenshot - is PDF content visible?
+```
+
+**Step 4: "Verify at least one page of the PDF is rendered"**
+```bash
+browser eval "document.querySelectorAll('canvas').length"
+# Should return >= 1
+```
+
+**If all steps pass:** Update feature_list.json to set `"passes": true`
+
+### Browser CLI Commands
+
+| Command | Purpose | Example |
+|---------|---------|---------|
+| `browser start` | Launch Chrome | `browser start` |
+| `browser nav <url>` | Navigate | `browser nav http://localhost:5173` |
+| `browser screenshot` | Capture viewport | `browser screenshot` |
+| `browser eval <code>` | Run JavaScript | `browser eval "document.title"` |
+| `browser content` | Extract page text | `browser content` |
+
+### Interpreting Steps - Guidelines
+
+- **"Load the PDF viewer"** → `browser nav http://localhost:5173`
+- **"Click the X button"** → `browser eval "document.querySelector('button:contains(X)').click()"` or find the right selector
+- **"Verify X is visible"** → `browser screenshot` then visually confirm, or `browser eval` to check DOM
+- **"Verify button is selected"** → Check for CSS class or style change via `browser eval`
+- **"Wait for X"** → Poll with `browser eval` until condition is true
+
+### When Steps Fail
+
+If a step doesn't work as expected:
+1. **Investigate** - Use `browser eval` to explore the DOM
+2. **Take screenshots** - Understand current visual state
+3. **Try alternatives** - Different selectors, different approaches
+4. **Document blockers** - If truly stuck, note in `claude-progress.txt`
+
+This is the power of natural language steps - you can adapt and problem-solve rather than failing on a rigid script.
 
 ---
 
@@ -139,30 +211,21 @@ Before ending ANY session:
 When editing `feature_list.json`:
 - You may ONLY change `"passes": false` → `"passes": true`
 - You may NOT remove features
-- You may NOT edit feature descriptions
-- You may NOT edit verification steps
+- You may NOT edit feature descriptions or steps
 - You may NOT reduce the scope of any feature
-
-### Incremental Progress
-
-- Complete ONE feature fully before starting another
-- If a feature is too large, document the breakdown in `claude-progress.txt`
-- Never declare the project "complete" - always check `feature_list.json` for remaining work
-- If all features pass, document this clearly and ask user for next steps
 
 ### Testing Requirements
 
 - Every feature must be tested end-to-end as a user would experience it
-- For UI features: Use `browser` CLI to verify visual and interactive behavior
-- Do not mark features as passing based on code inspection alone
-- If a feature cannot be tested (e.g., missing tools), document in progress notes
+- Use `browser` CLI to verify - don't just read the code
+- Take screenshots to confirm visual state
+- If a feature cannot be tested, document why in progress notes
 
 ### Git Discipline
 
 - Commit early and often
-- Use descriptive commit messages that explain the "why"
+- Use descriptive commit messages
 - Never leave uncommitted work at end of session
-- Use git to recover from mistakes: `git diff`, `git stash`, `git checkout`
 
 ---
 
@@ -174,177 +237,30 @@ When editing `feature_list.json`:
 - **PDF Engine**: EmbedPDF with PDFium renderer
 - **Dev Server**: `npm run dev` → http://localhost:5173
 
-### Current Architecture
+### Architecture
 ```
 src/
-├── App.tsx              # Root component, renders PDFViewer
+├── App.tsx              # Root component
 ├── main.tsx             # Entry point
 ├── components/
-│   ├── PDFViewer.tsx    # Main PDF viewer with all plugins
-│   └── AnnotationToolbar.tsx  # Tool selection UI
+│   ├── PDFViewer.tsx    # PDF viewer with plugins
+│   └── AnnotationToolbar.tsx  # Tool buttons
 ```
 
-### Implemented Annotation Tools (in toolbar)
-- Highlight (text highlighting)
-- Pen/Ink (freehand drawing)
-- Square (rectangle shapes)
-- Circle (ellipse shapes)
-- FreeText (text annotations)
-- Delete (remove selected annotation)
-
-### Available but NOT in toolbar
-- underline, strikeout, squiggly (text markup)
-- inkHighlighter (freehand highlighter)
-- line, lineArrow (straight lines)
-- polyline, polygon (multi-segment shapes)
-- stamp (image stamps)
-
-### Key APIs
-- `useAnnotationCapability()` - Hook for annotation operations
-- `annotationApi.setActiveTool(toolId)` - Activate a tool
-- `annotationApi.deleteAnnotation(pageIndex, id)` - Delete annotation
-- `annotationApi.onStateChange(callback)` - Listen for state changes
-- `annotationApi.getSelectedAnnotation()` - Get current selection
-
----
-
-## Browser CLI Testing
-
-The `browser` CLI tool provides end-to-end testing capabilities via Chrome DevTools Protocol.
-
-### Quick Start
-
-```bash
-# 1. Start Chrome with remote debugging
-browser start
-
-# 2. Navigate to URL
-browser nav http://localhost:5173
-
-# 3. Take screenshot (outputs filepath to /tmp/)
-browser screenshot
-
-# 4. Evaluate JavaScript on page
-browser eval "document.title"
-browser eval "document.querySelectorAll('button').length"
-```
-
-### Manual Testing Commands
-
-| Command | Description | Example |
-|---------|-------------|---------|
-| `browser start` | Launch Chrome | `browser start --profile` (keep cookies) |
-| `browser nav <url>` | Navigate to URL | `browser nav http://localhost:5173 --new` |
-| `browser screenshot` | Capture viewport | `browser screenshot --element "#toolbar"` |
-| `browser eval <code>` | Run JavaScript | `browser eval "document.title"` |
-| `browser content` | Extract page markdown | `browser content` |
-| `browser cookies` | Dump cookies | `browser cookies` |
-| `browser pick <prompt>` | Interactive element picker | `browser pick "Select button"` |
-
-### Screenshot Options
-
-```bash
-# Default: 1280x720 JPEG (~1229 tokens for Claude vision)
-browser screenshot
-
-# Crop to element (smaller, focused)
-browser screenshot --element "#annotation-toolbar"
-
-# Custom viewport
-browser screenshot --viewport 1920x1080
-
-# Full page scroll capture
-browser screenshot --full
-
-# PNG instead of JPEG
-browser screenshot --png
-```
-
-### Scenario-Based Testing (Automated)
-
-For repeatable tests, create scenario files in `./scenarios/`:
-
-**scenarios/pdf-loads.json:**
-```json
-{
-  "name": "pdf.loads",
-  "steps": [
-    {"action": "navigate", "url": "http://localhost:5173"},
-    {"action": "waitFor", "selector": "canvas", "timeout": 10000},
-    {"action": "assert", "type": "exists", "selector": ".annotation-toolbar"},
-    {"action": "screenshot", "name": "pdf-loaded"}
-  ]
-}
-```
-
-**Run scenario:**
-```bash
-browser run pdf.loads --dev-server "npm run dev" --dev-port 5173
-```
-
-**Scenario actions:**
-- `navigate` - Go to URL
-- `type` - Enter text in input
-- `click` - Click element
-- `waitFor` - Wait for selector
-- `assert` - Verify condition (text, url, exists, notExists)
-- `screenshot` - Capture viewport
-- `eval` - Run JavaScript
-
-### Testing Workflow for Features
-
-```bash
-# 1. Ensure browser is started
-browser start
-
-# 2. Navigate to app
-browser nav http://localhost:5173
-
-# 3. For each feature verification step:
-
-# Check element exists
-browser eval "!!document.querySelector('#toolbar')"
-
-# Check button text
-browser eval "document.querySelector('button').textContent"
-
-# Click button and verify state change
-browser eval "document.querySelector('[data-tool=highlight]').click()"
-browser screenshot  # Verify visual state
-
-# Count elements
-browser eval "document.querySelectorAll('.annotation').length"
-```
-
-### Interpreting Screenshots
-
-Screenshots are saved to `/tmp/screenshot-<timestamp>.jpg`. To view:
-- Use the Read tool: `Read /tmp/screenshot-2024-01-15T10-30-45-123Z.jpg`
-- Claude can analyze the image to verify visual state
+### Toolbar Buttons
+- Highlight, Pen, Square, Circle, Text, Delete
 
 ---
 
 ## Useful Commands
 
 ```bash
-# Start development
+# Dev server
 npm run dev
 
-# Build for production
-npm run build
-
-# Preview production build
-npm run preview
-
-# Lint code
-npm run lint
-
-# Git status
-git status
-
-# Recent commits
-git log --oneline -10
-
 # Check feature progress
-cat feature_list.json | jq '{total: .total_features, completed: .completed, remaining: (.total_features - .completed)}'
+cat feature_list.json | jq '{total: .total_features, completed: .completed}'
+
+# List failing features
+cat feature_list.json | jq '.features[] | select(.passes == false) | .id'
 ```
