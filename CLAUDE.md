@@ -76,9 +76,19 @@ If `feature_list.json` EXISTS, you are a **Coding Agent**. Your job is to make i
    ./init.sh
    ```
 
-3. **Run fundamental integration test**
-   - Open http://localhost:5173 in browser (use Playwright MCP if available)
-   - Verify PDF loads and basic interaction works
+3. **Start browser and run fundamental integration test**
+   ```bash
+   # Start Chrome with remote debugging
+   browser start
+
+   # Navigate to app
+   browser nav http://localhost:5173
+
+   # Wait briefly for PDF engine to load, then take screenshot
+   sleep 3
+   browser screenshot
+   ```
+   - Verify PDF loads and basic interaction works (check screenshot)
    - **If broken: FIX THIS FIRST** before any new work
 
 4. **Read feature list and select work**
@@ -92,7 +102,7 @@ If `feature_list.json` EXISTS, you are a **Coding Agent**. Your job is to make i
 ### Work Protocol:
 
 - **ONE FEATURE AT A TIME** - Do not attempt multiple features in a single session
-- **Test thoroughly** - Use browser automation (Playwright MCP) for end-to-end verification
+- **Test thoroughly** - Use `browser` CLI for end-to-end verification (see [Browser CLI Testing](#browser-cli-testing))
 - **Only mark `passes: true`** after careful testing confirms the feature works as a user would experience it
 - **Commit after each completed feature** - Small, atomic commits with descriptive messages
 
@@ -143,7 +153,7 @@ When editing `feature_list.json`:
 ### Testing Requirements
 
 - Every feature must be tested end-to-end as a user would experience it
-- For UI features: Use browser automation to verify visual and interactive behavior
+- For UI features: Use `browser` CLI to verify visual and interactive behavior
 - Do not mark features as passing based on code inspection alone
 - If a feature cannot be tested (e.g., missing tools), document in progress notes
 
@@ -195,6 +205,122 @@ src/
 - `annotationApi.deleteAnnotation(pageIndex, id)` - Delete annotation
 - `annotationApi.onStateChange(callback)` - Listen for state changes
 - `annotationApi.getSelectedAnnotation()` - Get current selection
+
+---
+
+## Browser CLI Testing
+
+The `browser` CLI tool provides end-to-end testing capabilities via Chrome DevTools Protocol.
+
+### Quick Start
+
+```bash
+# 1. Start Chrome with remote debugging
+browser start
+
+# 2. Navigate to URL
+browser nav http://localhost:5173
+
+# 3. Take screenshot (outputs filepath to /tmp/)
+browser screenshot
+
+# 4. Evaluate JavaScript on page
+browser eval "document.title"
+browser eval "document.querySelectorAll('button').length"
+```
+
+### Manual Testing Commands
+
+| Command | Description | Example |
+|---------|-------------|---------|
+| `browser start` | Launch Chrome | `browser start --profile` (keep cookies) |
+| `browser nav <url>` | Navigate to URL | `browser nav http://localhost:5173 --new` |
+| `browser screenshot` | Capture viewport | `browser screenshot --element "#toolbar"` |
+| `browser eval <code>` | Run JavaScript | `browser eval "document.title"` |
+| `browser content` | Extract page markdown | `browser content` |
+| `browser cookies` | Dump cookies | `browser cookies` |
+| `browser pick <prompt>` | Interactive element picker | `browser pick "Select button"` |
+
+### Screenshot Options
+
+```bash
+# Default: 1280x720 JPEG (~1229 tokens for Claude vision)
+browser screenshot
+
+# Crop to element (smaller, focused)
+browser screenshot --element "#annotation-toolbar"
+
+# Custom viewport
+browser screenshot --viewport 1920x1080
+
+# Full page scroll capture
+browser screenshot --full
+
+# PNG instead of JPEG
+browser screenshot --png
+```
+
+### Scenario-Based Testing (Automated)
+
+For repeatable tests, create scenario files in `./scenarios/`:
+
+**scenarios/pdf-loads.json:**
+```json
+{
+  "name": "pdf.loads",
+  "steps": [
+    {"action": "navigate", "url": "http://localhost:5173"},
+    {"action": "waitFor", "selector": "canvas", "timeout": 10000},
+    {"action": "assert", "type": "exists", "selector": ".annotation-toolbar"},
+    {"action": "screenshot", "name": "pdf-loaded"}
+  ]
+}
+```
+
+**Run scenario:**
+```bash
+browser run pdf.loads --dev-server "npm run dev" --dev-port 5173
+```
+
+**Scenario actions:**
+- `navigate` - Go to URL
+- `type` - Enter text in input
+- `click` - Click element
+- `waitFor` - Wait for selector
+- `assert` - Verify condition (text, url, exists, notExists)
+- `screenshot` - Capture viewport
+- `eval` - Run JavaScript
+
+### Testing Workflow for Features
+
+```bash
+# 1. Ensure browser is started
+browser start
+
+# 2. Navigate to app
+browser nav http://localhost:5173
+
+# 3. For each feature verification step:
+
+# Check element exists
+browser eval "!!document.querySelector('#toolbar')"
+
+# Check button text
+browser eval "document.querySelector('button').textContent"
+
+# Click button and verify state change
+browser eval "document.querySelector('[data-tool=highlight]').click()"
+browser screenshot  # Verify visual state
+
+# Count elements
+browser eval "document.querySelectorAll('.annotation').length"
+```
+
+### Interpreting Screenshots
+
+Screenshots are saved to `/tmp/screenshot-<timestamp>.jpg`. To view:
+- Use the Read tool: `Read /tmp/screenshot-2024-01-15T10-30-45-123Z.jpg`
+- Claude can analyze the image to verify visual state
 
 ---
 
