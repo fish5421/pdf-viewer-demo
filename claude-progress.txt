@@ -1,0 +1,50 @@
+# Claude Progress Log
+# PDF Viewer Demo with Annotations
+
+This file tracks progress across agent sessions. Each session should read this
+file at startup and update it before ending.
+
+================================================================================
+## Session 1 - 2025-12-06 23:33 EST - Initialization (Initializer Agent)
+================================================================================
+
+### What Was Done
+- Created long-running agent harness based on Anthropic's article
+  "Effective harnesses for long-running agents"
+- Set up CLAUDE.md with two-mode protocol (Initializer vs Coding Agent)
+- Created init.sh script for development environment setup
+- Created this progress file (claude-progress.txt)
+- Created comprehensive feature_list.json with 30 testable features
+- Initialized git repository
+
+### Architecture Decisions
+- Using JSON for feature list (not Markdown) per article recommendation
+  - Less prone to accidental LLM edits
+  - Structured format enforces schema
+- Feature categories: core, annotation, ui, integration
+- Features ordered by priority (core features first)
+
+### Current State
+- App runs: YES (verified - HTTP 200 from localhost:5173)
+- Features total: 30
+- Features passing: 0
+- Last tested: 2025-12-06 23:35 EST
+
+### Next Session Should
+1. Run ./init.sh to start dev server
+2. Verify app loads correctly at http://localhost:5173
+3. Pick first failing feature from feature_list.json (ID: 1 - PDF loads from URL)
+4. Test and mark as passing if it works
+5. Continue with next feature
+
+### Blockers
+- None
+
+### Notes
+- The app was created by "Manus AI" as a demo project
+- Uses EmbedPDF library with PDFium engine
+- React 19 + Vite 7 + TypeScript
+- Currently implements 5 annotation tools in toolbar (highlight, pen, square,
+  circle, freeText) but the EmbedPDF library supports many more
+
+================================================================================

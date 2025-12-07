@@ -1,0 +1,390 @@
+{
+  "project": "pdf-viewer-demo",
+  "description": "PDF Viewer with Annotation capabilities using EmbedPDF and React",
+  "created": "2025-12-06",
+  "total_features": 30,
+  "completed": 0,
+  "categories": {
+    "core": "Essential PDF viewing functionality",
+    "annotation": "Annotation creation and manipulation",
+    "ui": "User interface and interaction",
+    "integration": "End-to-end workflows"
+  },
+  "features": [
+    {
+      "id": 1,
+      "category": "core",
+      "description": "PDF loads and displays from remote URL",
+      "steps": [
+        "Navigate to http://localhost:5173",
+        "Wait for 'Loading PDF Engine...' message to disappear",
+        "Verify PDF content is visible on screen",
+        "Verify at least one page of the PDF is rendered"
+      ],
+      "passes": false
+    },
+    {
+      "id": 2,
+      "category": "core",
+      "description": "PDF pages can be scrolled vertically",
+      "steps": [
+        "Load the PDF viewer",
+        "Scroll down using mouse wheel or scrollbar",
+        "Verify additional pages become visible",
+        "Verify scroll position changes smoothly"
+      ],
+      "passes": false
+    },
+    {
+      "id": 3,
+      "category": "core",
+      "description": "Multiple PDF pages render correctly",
+      "steps": [
+        "Load the PDF viewer with multi-page document",
+        "Scroll through the document",
+        "Verify each page renders with correct content",
+        "Verify pages have consistent margins/spacing"
+      ],
+      "passes": false
+    },
+    {
+      "id": 4,
+      "category": "ui",
+      "description": "Toolbar displays all annotation tools",
+      "steps": [
+        "Load the PDF viewer",
+        "Locate the toolbar at top of viewport",
+        "Verify 'Annotation Tools:' label is visible",
+        "Verify Highlight button is present",
+        "Verify Pen button is present",
+        "Verify Square button is present",
+        "Verify Circle button is present",
+        "Verify Text button is present",
+        "Verify Delete button is present"
+      ],
+      "passes": false
+    },
+    {
+      "id": 5,
+      "category": "ui",
+      "description": "Tool buttons show selected state when clicked",
+      "steps": [
+        "Load the PDF viewer",
+        "Click the Highlight button",
+        "Verify Highlight button shows selected state (green border, light green background)",
+        "Click the Pen button",
+        "Verify Pen button now shows selected state",
+        "Verify Highlight button returns to normal state"
+      ],
+      "passes": false
+    },
+    {
+      "id": 6,
+      "category": "ui",
+      "description": "Tool buttons have hover effect",
+      "steps": [
+        "Load the PDF viewer",
+        "Hover mouse over a non-selected tool button",
+        "Verify background color changes on hover",
+        "Move mouse away",
+        "Verify background returns to normal"
+      ],
+      "passes": false
+    },
+    {
+      "id": 7,
+      "category": "annotation",
+      "description": "Highlight tool can be selected",
+      "steps": [
+        "Load the PDF viewer",
+        "Click the Highlight button in toolbar",
+        "Verify button shows selected state",
+        "Verify the annotation API has 'highlight' as active tool"
+      ],
+      "passes": false
+    },
+    {
+      "id": 8,
+      "category": "annotation",
+      "description": "Text can be highlighted in the PDF",
+      "steps": [
+        "Load the PDF viewer",
+        "Select the Highlight tool",
+        "Click and drag to select text on a PDF page",
+        "Release mouse button",
+        "Verify yellow highlight appears over selected text"
+      ],
+      "passes": false
+    },
+    {
+      "id": 9,
+      "category": "annotation",
+      "description": "Pen/Ink tool can be selected",
+      "steps": [
+        "Load the PDF viewer",
+        "Click the Pen button in toolbar",
+        "Verify button shows selected state"
+      ],
+      "passes": false
+    },
+    {
+      "id": 10,
+      "category": "annotation",
+      "description": "Freehand drawing works with Pen tool",
+      "steps": [
+        "Load the PDF viewer",
+        "Select the Pen tool",
+        "Click and drag on a PDF page to draw",
+        "Release mouse button",
+        "Verify ink stroke appears where drawn"
+      ],
+      "passes": false
+    },
+    {
+      "id": 11,
+      "category": "annotation",
+      "description": "Square tool can be selected",
+      "steps": [
+        "Load the PDF viewer",
+        "Click the Square button in toolbar",
+        "Verify button shows selected state"
+      ],
+      "passes": false
+    },
+    {
+      "id": 12,
+      "category": "annotation",
+      "description": "Rectangle shapes can be drawn",
+      "steps": [
+        "Load the PDF viewer",
+        "Select the Square tool",
+        "Click and drag on a PDF page",
+        "Release mouse button",
+        "Verify rectangle annotation appears"
+      ],
+      "passes": false
+    },
+    {
+      "id": 13,
+      "category": "annotation",
+      "description": "Circle tool can be selected",
+      "steps": [
+        "Load the PDF viewer",
+        "Click the Circle button in toolbar",
+        "Verify button shows selected state"
+      ],
+      "passes": false
+    },
+    {
+      "id": 14,
+      "category": "annotation",
+      "description": "Ellipse/circle shapes can be drawn",
+      "steps": [
+        "Load the PDF viewer",
+        "Select the Circle tool",
+        "Click and drag on a PDF page",
+        "Release mouse button",
+        "Verify ellipse/circle annotation appears"
+      ],
+      "passes": false
+    },
+    {
+      "id": 15,
+      "category": "annotation",
+      "description": "Text annotation tool can be selected",
+      "steps": [
+        "Load the PDF viewer",
+        "Click the Text button in toolbar",
+        "Verify button shows selected state"
+      ],
+      "passes": false
+    },
+    {
+      "id": 16,
+      "category": "annotation",
+      "description": "Text annotations can be added",
+      "steps": [
+        "Load the PDF viewer",
+        "Select the Text tool",
+        "Click on a location in the PDF",
+        "Type some text",
+        "Verify text annotation appears at clicked location"
+      ],
+      "passes": false
+    },
+    {
+      "id": 17,
+      "category": "annotation",
+      "description": "Annotations can be selected by clicking",
+      "steps": [
+        "Load the PDF viewer",
+        "Create any annotation (e.g., draw a rectangle)",
+        "Click on the annotation",
+        "Verify annotation shows selection state (handles or outline)"
+      ],
+      "passes": false
+    },
+    {
+      "id": 18,
+      "category": "annotation",
+      "description": "Delete button is disabled when nothing selected",
+      "steps": [
+        "Load the PDF viewer",
+        "Ensure no annotation is selected",
+        "Verify Delete button appears disabled (grayed out)",
+        "Verify Delete button cursor shows not-allowed"
+      ],
+      "passes": false
+    },
+    {
+      "id": 19,
+      "category": "annotation",
+      "description": "Delete button enables when annotation is selected",
+      "steps": [
+        "Load the PDF viewer",
+        "Create an annotation",
+        "Select the annotation by clicking it",
+        "Verify Delete button becomes enabled (red styling)"
+      ],
+      "passes": false
+    },
+    {
+      "id": 20,
+      "category": "annotation",
+      "description": "Annotations can be deleted",
+      "steps": [
+        "Load the PDF viewer",
+        "Create an annotation",
+        "Select the annotation",
+        "Click the Delete button",
+        "Verify annotation is removed from the page"
+      ],
+      "passes": false
+    },
+    {
+      "id": 21,
+      "category": "ui",
+      "description": "Loading state displays while PDF engine initializes",
+      "steps": [
+        "Navigate to http://localhost:5173 (clear cache if needed)",
+        "Observe initial load",
+        "Verify 'Loading PDF Engine...' message appears",
+        "Verify message disappears when PDF is ready"
+      ],
+      "passes": false
+    },
+    {
+      "id": 22,
+      "category": "ui",
+      "description": "PDF pages have shadow effect",
+      "steps": [
+        "Load the PDF viewer",
+        "Observe rendered pages",
+        "Verify each page has box shadow for visual depth"
+      ],
+      "passes": false
+    },
+    {
+      "id": 23,
+      "category": "ui",
+      "description": "Viewport has gray background",
+      "steps": [
+        "Load the PDF viewer",
+        "Observe area around PDF pages",
+        "Verify background is light gray (#f1f3f5)"
+      ],
+      "passes": false
+    },
+    {
+      "id": 24,
+      "category": "ui",
+      "description": "Toolbar has proper styling",
+      "steps": [
+        "Load the PDF viewer",
+        "Observe toolbar",
+        "Verify toolbar has white background",
+        "Verify toolbar has rounded corners",
+        "Verify toolbar has shadow",
+        "Verify toolbar is horizontally centered"
+      ],
+      "passes": false
+    },
+    {
+      "id": 25,
+      "category": "ui",
+      "description": "Toolbar has separator between tools and delete",
+      "steps": [
+        "Load the PDF viewer",
+        "Observe toolbar",
+        "Verify vertical separator line exists between annotation tools and Delete button"
+      ],
+      "passes": false
+    },
+    {
+      "id": 26,
+      "category": "integration",
+      "description": "Complete workflow: Create and delete highlight",
+      "steps": [
+        "Load the PDF viewer",
+        "Select Highlight tool",
+        "Highlight some text",
+        "Click on the highlight to select it",
+        "Click Delete button",
+        "Verify highlight is removed"
+      ],
+      "passes": false
+    },
+    {
+      "id": 27,
+      "category": "integration",
+      "description": "Complete workflow: Create multiple annotations",
+      "steps": [
+        "Load the PDF viewer",
+        "Create a highlight annotation",
+        "Create a pen/ink annotation",
+        "Create a rectangle annotation",
+        "Verify all three annotations are visible simultaneously"
+      ],
+      "passes": false
+    },
+    {
+      "id": 28,
+      "category": "integration",
+      "description": "Annotations persist while scrolling",
+      "steps": [
+        "Load the PDF viewer",
+        "Create an annotation on page 1",
+        "Scroll to page 2 or later",
+        "Scroll back to page 1",
+        "Verify the annotation is still visible"
+      ],
+      "passes": false
+    },
+    {
+      "id": 29,
+      "category": "integration",
+      "description": "Tool selection persists across pages",
+      "steps": [
+        "Load the PDF viewer",
+        "Select the Pen tool",
+        "Scroll to a different page",
+        "Draw on the new page",
+        "Verify drawing works without reselecting tool"
+      ],
+      "passes": false
+    },
+    {
+      "id": 30,
+      "category": "integration",
+      "description": "Application loads without console errors",
+      "steps": [
+        "Open browser developer tools",
+        "Navigate to http://localhost:5173",
+        "Wait for PDF to fully load",
+        "Check console for errors",
+        "Verify no JavaScript errors are present"
+      ],
+      "passes": false
+    }
+  ]
+}
