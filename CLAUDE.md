@@ -5,7 +5,14 @@
 **CRITICAL: Execute this EVERY session before ANY other work:**
 
 1. Run `pwd` to confirm working directory
-2. Check if `feature_list.json` exists:
+2. Read `claude-progress.txt` to understand prior session context:
+   ```bash
+   cat claude-progress.txt
+   ```
+   - Review what was done in previous sessions
+   - Note any blockers or recommendations for this session
+   - Understand current project state before proceeding
+3. Check if `feature_list.json` exists:
    - **If NO** → This is the FIRST SESSION. Execute [Initialization Protocol](#initialization-protocol)
    - **If YES** → Execute [Coding Agent Protocol](#coding-agent-protocol)
 
@@ -64,10 +71,8 @@ If `feature_list.json` EXISTS, you are a **Coding Agent**. Your job is to make i
 
 ### Session Startup (MANDATORY):
 
-1. **Get bearings**
+1. **Review git history** (progress file already read in startup protocol)
    ```bash
-   pwd
-   cat claude-progress.txt
    git log --oneline -10
    ```
 
