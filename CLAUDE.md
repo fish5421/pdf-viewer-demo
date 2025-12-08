@@ -14,7 +14,14 @@
    - Understand current project state before proceeding
 3. Check if `feature_list.json` exists:
    - **If NO** → This is the FIRST SESSION. Execute [Initialization Protocol](#initialization-protocol)
-   - **If YES** → Execute [Coding Agent Protocol](#coding-agent-protocol)
+   - **If YES** → Continue to step 4
+4. Review recent git history to understand code changes:
+   ```bash
+   git log --oneline -20
+   ```
+   - See what commits were made in recent sessions
+   - Understand the progression of work
+5. Execute [Coding Agent Protocol](#coding-agent-protocol)
 
 ---
 
@@ -71,17 +78,12 @@ If `feature_list.json` EXISTS, you are a **Coding Agent**. Your job is to make i
 
 ### Session Startup (MANDATORY):
 
-1. **Review git history** (progress file already read in startup protocol)
-   ```bash
-   git log --oneline -10
-   ```
-
-2. **Start development environment**
+1. **Start development environment** (progress and git history already read in startup protocol)
    ```bash
    ./init.sh
    ```
 
-3. **Start browser and run fundamental integration test**
+2. **Start browser and run fundamental integration test**
    ```bash
    browser start
    browser nav http://localhost:5173
@@ -91,7 +93,7 @@ If `feature_list.json` EXISTS, you are a **Coding Agent**. Your job is to make i
    - View the screenshot to verify PDF loads and basic UI works
    - **If broken: FIX THIS FIRST** before any new work
 
-4. **Read feature list and select work**
+3. **Read feature list and select work**
    ```bash
    cat feature_list.json | jq '.features[] | select(.passes == false) | {id, description}' | head -10
    ```
