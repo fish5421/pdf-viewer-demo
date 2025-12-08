@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { createPluginRegistration } from '@embedpdf/core';
 import { EmbedPDF } from '@embedpdf/core/react';
 import { usePdfiumEngine } from '@embedpdf/engines/react';
@@ -18,6 +19,10 @@ import { AnnotationLayer } from '@embedpdf/plugin-annotation/react';
 import { SelectionLayer } from '@embedpdf/plugin-selection/react';
 
 import { AnnotationToolbar } from './AnnotationToolbar';
+import { useHybridLoader } from '../hooks/useHybridLoader';
+
+// PDF URL - used by both EmbedPDF visual layer and HybridLoader context layer
+const PDF_URL = 'https://snippet.embedpdf.com/ebook.pdf';
 
 // Register all plugins
 const plugins = [
@@ -26,7 +31,7 @@ const plugins = [
       type: 'url',
       pdfFile: {
         id: 'example-pdf',
-        url: 'https://snippet.embedpdf.com/ebook.pdf',
+        url: PDF_URL,
       },
     },
   }),
@@ -46,10 +51,42 @@ const plugins = [
 ];
 
 export const PDFViewer = () => {
-  // Initialize the PDFium engine
-  const { engine, isLoading } = usePdfiumEngine();
+  // Initialize the PDFium engine (Visual Layer)
+  const { engine, isLoading: engineLoading } = usePdfiumEngine();
 
-  if (isLoading || !engine) {
+  // Initialize the HybridLoader (Context Layer for LLM)
+  const {
+    loadFromUrl,
+    isLoading: contextLoading,
+    isReady: contextReady,
+    context,
+    error: contextError,
+  } = useHybridLoader();
+
+  // Load the context layer when component mounts
+  useEffect(() => {
+    loadFromUrl(PDF_URL).catch(err => {
+      console.error('[HybridLoader] Failed to load context:', err);
+    });
+  }, [loadFromUrl]);
+
+  // Log context status for debugging
+  useEffect(() => {
+    if (contextReady && context) {
+      console.log('[HybridLoader] Context ready:', {
+        pageCount: context.pageCount,
+        base64Length: context.base64.length,
+        textMapPages: context.textMap.length,
+        metadata: context.metadata,
+      });
+      console.log('[HybridLoader] Access via window.Engram.documentContext');
+    }
+    if (contextError) {
+      console.error('[HybridLoader] Context error:', contextError);
+    }
+  }, [contextReady, context, contextError]);
+
+  if (engineLoading || !engine) {
     return (
       <div style={{
         display: 'flex',
@@ -66,7 +103,26 @@ export const PDFViewer = () => {
 
   // Render the viewer
   return (
-    <div style={{ height: '100vh' }}>
+    <div style={{ height: '100vh', position: 'relative' }}>
+      {/* Context Layer Status Indicator */}
+      <div style={{
+        position: 'fixed',
+        bottom: '1rem',
+        right: '1rem',
+        padding: '0.5rem 1rem',
+        borderRadius: '4px',
+        fontSize: '0.75rem',
+        fontFamily: 'monospace',
+        zIndex: 1000,
+        backgroundColor: contextReady ? '#d4edda' : contextLoading ? '#fff3cd' : contextError ? '#f8d7da' : '#e2e3e5',
+        color: contextReady ? '#155724' : contextLoading ? '#856404' : contextError ? '#721c24' : '#383d41',
+        border: `1px solid ${contextReady ? '#c3e6cb' : contextLoading ? '#ffeeba' : contextError ? '#f5c6cb' : '#d6d8db'}`,
+      }}>
+        {contextLoading && '⏳ Loading LLM Context...'}
+        {contextReady && `✅ Context Ready (${context?.pageCount} pages)`}
+        {contextError && `❌ Context Error`}
+        {!contextLoading && !contextReady && !contextError && '⏸️ Context Pending'}
+      </div>
       <EmbedPDF engine={engine} plugins={plugins}>
         <AnnotationToolbar />
         <Viewport

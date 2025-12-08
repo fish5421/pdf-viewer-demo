@@ -48,3 +48,60 @@ file at startup and update it before ending.
   circle, freeText) but the EmbedPDF library supports many more
 
 ================================================================================
+## Session 2 - 2025-12-08 12:00 PST - Coding Agent (infra.core.hybrid-loader)
+================================================================================
+
+### What Was Done
+- Implemented `infra.core.hybrid-loader` feature - Dual-state PDF loading
+- Created `src/services/HybridLoader.ts` - Core service for hybrid loading
+- Created `src/hooks/useHybridLoader.ts` - React hook for the service
+- Integrated HybridLoader into PDFViewer component
+- Added visual status indicator showing "Context Ready (X pages)"
+- Exposed `window.Engram.documentContext` API for debugging and LLM integration
+
+### Technical Implementation
+- **Visual Layer**: EmbedPDF with PDFium engine (unchanged, renders PDF)
+- **Context Layer**: PDF.js for text extraction + Base64 conversion
+- **Text Map**: Extracted text items with X/Y coordinates per page
+- **Base64**: Full PDF converted to Base64 string (~245KB for 4-page test PDF)
+- **API Surface**: `window.Engram.documentContext` with:
+  - `base64`: String for LLM API calls
+  - `pageCount`: Total pages
+  - `textMap`: Array of {pageNumber, textItems, fullText}
+  - `metadata`: {title, author, subject}
+  - `isReady`: Boolean for readiness check
+
+### Files Created/Modified
+- NEW: `src/services/HybridLoader.ts` (HybridLoader service)
+- NEW: `src/hooks/useHybridLoader.ts` (React hook)
+- MOD: `src/components/PDFViewer.tsx` (integrated HybridLoader)
+- MOD: `package.json` (added pdfjs-dist dependency)
+- MOD: `feature_list.json` (marked feature as passing)
+
+### Verified
+- PDF renders on screen (Visual Layer via EmbedPDF) ✅
+- Text items extracted with X/Y coordinates ✅
+- Base64 string ready for LLM API calls ✅
+- Status indicator shows "Context Ready (4 pages)" ✅
+
+### Current State
+- App runs: YES
+- Features total: 15
+- Features passing: 1 (infra.core.hybrid-loader)
+- Last tested: 2025-12-08 12:15 PST
+
+### Next Session Should
+1. Run ./init.sh to start dev server
+2. Pick next failing feature (suggest: `infra.storage.persistence` or `infra.llm.client`)
+3. Test and implement as needed
+4. The hybrid-loader is now ready for features that depend on it
+
+### Blockers
+- None
+
+### Notes
+- PDF.js worker loaded from unpkg CDN (cdnjs had issues)
+- HybridLoader is a singleton accessible via `window.Engram.hybridLoader`
+- The Base64 output is suitable for Claude/Gemini multimodal API calls
+
+================================================================================

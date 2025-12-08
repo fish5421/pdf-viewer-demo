@@ -1,315 +1,253 @@
 {
   "project": "pdf-viewer-demo",
   "description": "PDF Viewer with Annotation capabilities using EmbedPDF and React",
-  "created": "2025-12-06",
-  "total_features": 30,
-  "completed": 2,
+  "created": "2025-12-08",
+  "total_features": 15,
+  "completed": 1,
   "features": [
     {
-      "id": "core.pdf-loads",
+      "id": "infra.core.hybrid-loader",
+      "layer": "infra",
       "category": "core",
-      "description": "PDF loads and displays from remote URL",
+      "depends_on": [],
+      "description": "Load the PDF in two parallel states: a 'Visual Layer' (PDF.js) for user interaction/highlighting, and a 'Context Layer' (Base64/Binary) for the Multimodal LLM.",
       "steps": [
-        "Navigate to http://localhost:5173",
-        "Wait for the PDF engine to finish loading (loading message should disappear)",
-        "Verify PDF content is visible on screen",
-        "Verify at least one page of the PDF is rendered"
+        "Load PDF via PDF.js for rendering the UI canvas",
+        "Extract text items (with X/Y coords) specifically for creating a 'searchable map' (to sync scroll position to page numbers)",
+        "Convert PDF file to Base64 string (or prepare blob) to be sent to the LLM as a 'document' or 'image' type",
+        "Verify: PDF renders on screen AND the Base64 string is ready for the first API call"
       ],
       "passes": true
     },
     {
-      "id": "core.pdf-scroll",
+      "id": "infra.storage.persistence",
+      "layer": "infra",
+      "category": "state",
+      "depends_on": [
+        "infra.core.hybrid-loader"
+      ],
+      "description": "Implement IndexedDB storage to persist user data (highlights/notes) and cache the large document context to avoid re-uploading.",
+      "steps": [
+        "Initialize IndexedDB with stores for 'documents', 'highlights', 'user_progress', and 'cornell_notes'",
+        "Store the document file handle or blob (if size permits) or hash for identification",
+        "Save current page/scroll position on change",
+        "Verify: Refresh browser and document opens to the exact same page"
+      ],
+      "passes": false
+    },
+    {
+      "id": "infra.context.scroll-tracker",
+      "layer": "infra",
       "category": "core",
-      "description": "PDF pages can be scrolled vertically",
+      "depends_on": [
+        "infra.core.hybrid-loader"
+      ],
+      "description": "Real-time tracking of which 'Page Number' or 'Visual Zone' the user is viewing to guide the AI.",
       "steps": [
-        "Load the PDF viewer",
-        "Scroll down in the PDF viewport",
-        "Verify the view has scrolled and different content is visible"
+        "Implement IntersectionObserver on PDF.js page containers",
+        "Expose `window.Engram.currentView`: `{ pageNumber: 5, viewportProgress: 0.3 }`",
+        "Do NOT rely on extracting perfect text for the cursor; rely on Page Numbers which the Multimodal LLM understands perfectly",
+        "Verify: Scroll to Page 5, check state, confirm it reads Page 5"
       ],
       "passes": false
     },
     {
-      "id": "core.pdf-multipage",
+      "id": "infra.llm.client",
+      "layer": "infra",
       "category": "core",
-      "description": "Multiple PDF pages render correctly",
+      "depends_on": [],
+      "description": "Centralized service to handle Multimodal LLM API calls (Claude/Gemini) with support for file attachments.",
       "steps": [
-        "Load the PDF viewer",
-        "Check how many pages/canvases are rendered",
-        "Verify multiple pages exist in the document"
+        "Create generic `callLLM(systemPrompt, userMessage, fileContext?)` function",
+        "Implement prompt caching headers (essential for large PDFs to reduce cost/latency)",
+        "Implement error handling and loading states",
+        "Verify: Send the PDF + 'What is the title of this book?' and get correct answer"
       ],
       "passes": false
     },
     {
-      "id": "ui.toolbar-visible",
-      "category": "ui",
-      "description": "Toolbar displays with annotation tools",
+      "id": "interaction.ui.overlay-manager",
+      "layer": "interaction",
+      "category": "selection",
+      "depends_on": [],
+      "description": "A Z-index management system to render full-screen overlays (for 'Prime' dashboard) or element-specific blurs (for 'Recall') over the PDF canvas.",
       "steps": [
-        "Load the PDF viewer",
-        "Look for the annotation toolbar at the top of the page",
-        "Verify the toolbar contains buttons for: Highlight, Pen, Square, Circle, Text, Delete"
-      ],
-      "passes": true
-    },
-    {
-      "id": "ui.tool-selection",
-      "category": "ui",
-      "description": "Tool buttons show selected state when clicked",
-      "steps": [
-        "Load the PDF viewer",
-        "Click the Highlight button",
-        "Verify the button visually shows it is selected (different styling)",
-        "Click the Pen button",
-        "Verify Pen is now selected and Highlight is no longer selected"
+        "Create a transparent DOM container overlaid on the PDF viewer",
+        "Implement `showOverlay(type, content)` method",
+        "Implement 'Blur' CSS class toggling on the main PDF viewer container",
+        "Verify: Trigger overlay, confirm PDF is obscured/blurred and overlay content is clickable"
       ],
       "passes": false
     },
     {
-      "id": "ui.delete-disabled",
-      "category": "ui",
-      "description": "Delete button is disabled when nothing selected",
+      "id": "interaction.notebook.cornell-ui",
+      "layer": "interaction",
+      "category": "notes",
+      "depends_on": [
+        "infra.storage.persistence"
+      ],
+      "description": "A dedicated 'Notebook Paper' UI panel implementing the Cornell Layout (Right: Notes, Left: Cues, Bottom: Summary).",
       "steps": [
-        "Load the PDF viewer",
-        "Look at the Delete button without selecting any annotation",
-        "Verify Delete button appears disabled or grayed out"
+        "Create a resizeable split-screen view: PDF on left, Notebook on right",
+        "Implement 3-zone layout: 'Cue Column' (30% width), 'Note Area' (70% width), 'Summary Footer'",
+        "Bind input fields to IndexedDB (auto-save on typing)",
+        "Verify: Type in 'Note Area', refresh page, text persists in correct column"
       ],
       "passes": false
     },
     {
-      "id": "ui.toolbar-styling",
-      "category": "ui",
-      "description": "Toolbar has proper visual styling",
+      "id": "interaction.chat.panel",
+      "layer": "interaction",
+      "category": "chat",
+      "depends_on": [
+        "infra.llm.client"
+      ],
+      "description": "The 'Socratic Tutor' interface. A sidebar component to display the conversation history and input.",
       "steps": [
-        "Load the PDF viewer",
-        "Examine the toolbar appearance",
-        "Verify toolbar has white background, rounded corners, and shadow"
+        "Build a collapsible sidebar UI component",
+        "Bind input field to `infra.llm.client`",
+        "Render user/assistant message bubbles with markdown support",
+        "Verify: Type message, see loading state, see AI response bubble appear"
       ],
       "passes": false
     },
     {
-      "id": "ui.page-shadow",
-      "category": "ui",
-      "description": "PDF pages have shadow effect for depth",
+      "id": "interaction.chat.cursor-prompt",
+      "layer": "interaction",
+      "category": "chat",
+      "depends_on": [
+        "interaction.chat.panel",
+        "infra.context.scroll-tracker",
+        "infra.core.hybrid-loader"
+      ],
+      "description": "The logic that prompts the AI to look at specific pages in its context window based on the user's scroll position.",
       "steps": [
-        "Load the PDF viewer",
-        "Look at the PDF page rendering",
-        "Verify pages have a subtle shadow around them"
+        "Construct dynamic system prompt: 'You have the full book. The user is looking at Page {PageNum}. Answer based on this page.'",
+        "Update `interaction.chat.panel` to use this dynamic prompt for all requests",
+        "Verify: Scroll to page 10, ask 'What is this page about?', ensure answer cites page 10 content"
       ],
       "passes": false
     },
     {
-      "id": "ui.viewport-background",
-      "category": "ui",
-      "description": "Viewport has gray background",
+      "id": "interaction.selection.highlighter",
+      "layer": "interaction",
+      "category": "highlight",
+      "depends_on": [
+        "infra.storage.persistence"
+      ],
+      "description": "The ability to select text and persist a visual highlight. Prerequisite for the '20% Rule'.",
       "steps": [
-        "Load the PDF viewer",
-        "Look at the area around the PDF pages",
-        "Verify the background is a light gray color"
+        "Capture `mouseup` events on text layer to get selection range",
+        "Render visual highlight (yellow background) behind text",
+        "Persist selection coordinates to IndexedDB",
+        "Verify: Highlight text, refresh page, highlight remains visible"
       ],
       "passes": false
     },
     {
-      "id": "annotation.highlight-tool",
-      "category": "annotation",
-      "description": "Highlight tool can be activated",
+      "id": "cognitive.notebook.cue-generator",
+      "layer": "cognitive",
+      "category": "notes",
+      "depends_on": [
+        "interaction.notebook.cornell-ui",
+        "infra.llm.client"
+      ],
+      "description": "AI analysis of user notes to auto-generate questions for the 'Cue Column', facilitating self-testing.",
       "steps": [
-        "Load the PDF viewer",
-        "Click the Highlight button in the toolbar",
-        "Verify the tool is now active (button shows selected state)"
+        "Add a 'Generate Cues' button to the Notebook UI",
+        "Prompt LLM: 'Analyze these notes: {UserNotes}. Generate 3-5 brief recall keywords/questions for the Cue column.'",
+        "Populate the Left 'Cue Column' with the response",
+        "Verify: Write notes about 'Variables', click generate, see 'What is a variable?' appear in Cue column"
       ],
       "passes": false
     },
     {
-      "id": "annotation.pen-tool",
-      "category": "annotation",
-      "description": "Pen/Ink tool can be activated",
+      "id": "cognitive.prime.dashboard",
+      "layer": "cognitive",
+      "category": "prime",
+      "depends_on": [
+        "interaction.ui.overlay-manager",
+        "infra.core.hybrid-loader",
+        "infra.llm.client"
+      ],
+      "description": "Neuro-Hack #1: Before reading, block content and force user to review a structural map generated by AI.",
       "steps": [
-        "Load the PDF viewer",
-        "Click the Pen button in the toolbar",
-        "Verify the tool is now active"
+        "On new chapter load, trigger `overlay-manager` to block view",
+        "Prompt LLM (with full book context): 'Generate a structural JSON map of Chapter {N}'",
+        "Render hierarchy in overlay",
+        "Require user click 'I understand the structure' to dismiss overlay",
+        "Verify: Load document, see map, cannot see text until dismissed"
       ],
       "passes": false
     },
     {
-      "id": "annotation.square-tool",
-      "category": "annotation",
-      "description": "Square/Rectangle tool can be activated",
+      "id": "cognitive.recall.blur-logic",
+      "layer": "cognitive",
+      "category": "recall",
+      "depends_on": [
+        "interaction.ui.overlay-manager",
+        "interaction.chat.cursor-prompt",
+        "infra.context.scroll-tracker"
+      ],
+      "description": "Neuro-Hack #4: At section breaks, blur the screen and force a retrieval question via chat.",
       "steps": [
-        "Load the PDF viewer",
-        "Click the Square button in the toolbar",
-        "Verify the tool is now active"
+        "Monitor scroll; detect significant whitespace/section breaks (or page boundaries)",
+        "Trigger 'Blur' effect via `overlay-manager`",
+        "Auto-inject prompt to Chat: 'Ask a retrieval question about Page {PrevPage}'",
+        "Prevent blur removal until user replies in Chat",
+        "Verify: Finish section, screen blurs, AI asks question, reply removes blur"
       ],
       "passes": false
     },
     {
-      "id": "annotation.circle-tool",
-      "category": "annotation",
-      "description": "Circle/Ellipse tool can be activated",
+      "id": "cognitive.highlight.limiter",
+      "layer": "cognitive",
+      "category": "highlight",
+      "depends_on": [
+        "interaction.selection.highlighter"
+      ],
+      "description": "Neuro-Hack #2: Enforce the 20% rule by calculating character density of highlights vs page text.",
       "steps": [
-        "Load the PDF viewer",
-        "Click the Circle button in the toolbar",
-        "Verify the tool is now active"
+        "Calculate total character count of current page",
+        "Calculate character count of current highlights",
+        "If highlight ratio > 0.2, prevent new highlight rendering",
+        "Trigger Chat warning: '20% limit reached. Summarize instead.'",
+        "Verify: Highlight >20% of page, attempt next highlight, see rejection and chat message"
       ],
       "passes": false
     },
     {
-      "id": "annotation.text-tool",
-      "category": "annotation",
-      "description": "Text annotation tool can be activated",
+      "id": "cognitive.interweaver.suggestions",
+      "layer": "cognitive",
+      "category": "interweave",
+      "depends_on": [
+        "interaction.chat.cursor-prompt",
+        "infra.storage.persistence"
+      ],
+      "description": "Neuro-Hack #6: Proactive sidebar notifications connecting current text to previous concepts.",
       "steps": [
-        "Load the PDF viewer",
-        "Click the Text button in the toolbar",
-        "Verify the tool is now active"
+        "Background process: Send current page number to LLM every 2 minutes",
+        "Prompt: 'Looking at Page {N}, find connections to previous chapters'",
+        "If connection found, spawn a 'toast' notification in sidebar",
+        "Verify: Read Chapter 3, see notification referencing Chapter 1 concept"
       ],
       "passes": false
     },
     {
-      "id": "annotation.create-highlight",
-      "category": "annotation",
-      "description": "Can create a highlight annotation on text",
-      "steps": [
-        "Load the PDF viewer",
-        "Activate the Highlight tool",
-        "Select some text in the PDF by clicking and dragging",
-        "Verify a yellow highlight appears over the selected text"
+      "id": "cognitive.spacing.cold-open",
+      "layer": "cognitive",
+      "category": "spacing",
+      "depends_on": [
+        "infra.storage.persistence",
+        "interaction.ui.overlay-manager",
+        "interaction.chat.panel"
       ],
-      "passes": false
-    },
-    {
-      "id": "annotation.create-ink",
-      "category": "annotation",
-      "description": "Can draw freehand with Pen tool",
+      "description": "Neuro-Hack #3 & #8: If session gap > 24h, block reading with a retrieval prompt about the last session.",
       "steps": [
-        "Load the PDF viewer",
-        "Activate the Pen tool",
-        "Click and drag on the PDF to draw a line",
-        "Verify an ink stroke appears where you drew"
-      ],
-      "passes": false
-    },
-    {
-      "id": "annotation.create-square",
-      "category": "annotation",
-      "description": "Can draw a rectangle annotation",
-      "steps": [
-        "Load the PDF viewer",
-        "Activate the Square tool",
-        "Click and drag on the PDF to create a rectangle",
-        "Verify a rectangle shape appears"
-      ],
-      "passes": false
-    },
-    {
-      "id": "annotation.create-circle",
-      "category": "annotation",
-      "description": "Can draw a circle/ellipse annotation",
-      "steps": [
-        "Load the PDF viewer",
-        "Activate the Circle tool",
-        "Click and drag on the PDF to create an ellipse",
-        "Verify a circle/ellipse shape appears"
-      ],
-      "passes": false
-    },
-    {
-      "id": "annotation.create-text",
-      "category": "annotation",
-      "description": "Can add a text annotation",
-      "steps": [
-        "Load the PDF viewer",
-        "Activate the Text tool",
-        "Click somewhere on the PDF",
-        "Type some text",
-        "Verify the text annotation appears"
-      ],
-      "passes": false
-    },
-    {
-      "id": "annotation.select",
-      "category": "annotation",
-      "description": "Can select an existing annotation",
-      "steps": [
-        "Load the PDF viewer with an existing annotation (or create one)",
-        "Click on the annotation",
-        "Verify the annotation shows selection handles or highlight"
-      ],
-      "passes": false
-    },
-    {
-      "id": "annotation.delete",
-      "category": "annotation",
-      "description": "Can delete a selected annotation",
-      "steps": [
-        "Load the PDF viewer",
-        "Create an annotation",
-        "Select the annotation by clicking it",
-        "Click the Delete button",
-        "Verify the annotation is removed from the page"
-      ],
-      "passes": false
-    },
-    {
-      "id": "integration.tool-switching",
-      "category": "integration",
-      "description": "Can switch between different annotation tools",
-      "steps": [
-        "Load the PDF viewer",
-        "Click Highlight tool, verify it's selected",
-        "Click Pen tool, verify it's now selected and Highlight is not",
-        "Click Square tool, verify it's now selected",
-        "Confirm only one tool is active at a time"
-      ],
-      "passes": false
-    },
-    {
-      "id": "integration.annotation-persistence",
-      "category": "integration",
-      "description": "Annotations persist while scrolling",
-      "steps": [
-        "Load the PDF viewer",
-        "Create an annotation on the visible page",
-        "Scroll away from that page",
-        "Scroll back to the original page",
-        "Verify the annotation is still there"
-      ],
-      "passes": false
-    },
-    {
-      "id": "integration.multiple-annotations",
-      "category": "integration",
-      "description": "Can create multiple annotations of different types",
-      "steps": [
-        "Load the PDF viewer",
-        "Create a highlight annotation",
-        "Create a pen/ink annotation",
-        "Create a rectangle annotation",
-        "Verify all three annotations are visible at the same time"
-      ],
-      "passes": false
-    },
-    {
-      "id": "integration.create-delete-workflow",
-      "category": "integration",
-      "description": "Full create-select-delete workflow",
-      "steps": [
-        "Load the PDF viewer",
-        "Create any annotation",
-        "Select it",
-        "Verify Delete button becomes enabled",
-        "Delete it",
-        "Verify it's gone"
-      ],
-      "passes": false
-    },
-    {
-      "id": "integration.no-errors",
-      "category": "integration",
-      "description": "App loads without JavaScript errors",
-      "steps": [
-        "Open browser console/dev tools",
-        "Navigate to the PDF viewer",
-        "Wait for full load",
-        "Check console for any JavaScript errors",
-        "Verify no errors are present"
+        "On load, check `last_session_timestamp` in IndexedDB",
+        "If > 24 hours, trigger opaque overlay",
+        "Prompt LLM: 'User last read Page {N}. Ask a retrieval question about it.'",
+        "Verify: Manually set old timestamp in DB, reload, see Cold Open challenge"
       ],
       "passes": false
     }
