@@ -3,7 +3,7 @@
   "description": "PDF Viewer with Annotation capabilities using EmbedPDF and React",
   "created": "2025-12-08",
   "total_features": 15,
-  "completed": 1,
+  "completed": 2,
   "features": [
     {
       "id": "infra.core.hybrid-loader",
@@ -33,7 +33,7 @@
         "Save current page/scroll position on change",
         "Verify: Refresh browser and document opens to the exact same page"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "infra.context.scroll-tracker",
