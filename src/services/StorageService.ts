@@ -490,16 +490,8 @@ class StorageServiceClass {
 // Singleton instance
 export const StorageService = new StorageServiceClass();
 
-// Expose on window.Engram for debugging
-declare global {
-  interface Window {
-    Engram: {
-      hybridLoader: unknown;
-      documentContext: unknown;
-      storage: StorageServiceClass;
-    };
-  }
-}
+// Note: Window.Engram interface is declared in HybridLoader.ts
+// We just add the storage property here
 
 if (typeof window !== 'undefined') {
   window.Engram = window.Engram || ({} as Window['Engram']);

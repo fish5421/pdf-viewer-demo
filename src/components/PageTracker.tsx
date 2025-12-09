@@ -37,7 +37,8 @@ export const PageTracker = ({ onPageChange, initialPage, storageReady }: PageTra
   useEffect(() => {
     if (!isReady || !scrollCapability?.onPageChange) return;
 
-    const unsubscribe = scrollCapability.onPageChange.on((payload) => {
+    // Note: onPageChange is a direct function in newer EmbedPDF versions
+    const unsubscribe = scrollCapability.onPageChange((payload: { pageNumber: number; totalPages: number }) => {
       const page = payload.pageNumber;
 
       // Avoid reporting duplicate page changes

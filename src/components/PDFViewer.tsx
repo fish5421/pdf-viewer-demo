@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { createPluginRegistration } from '@embedpdf/core';
 import { EmbedPDF } from '@embedpdf/core/react';
 import { usePdfiumEngine } from '@embedpdf/engines/react';
@@ -19,9 +19,9 @@ import { AnnotationLayer } from '@embedpdf/plugin-annotation/react';
 import { SelectionLayer } from '@embedpdf/plugin-selection/react';
 
 import { AnnotationToolbar } from './AnnotationToolbar';
-// PageTracker disabled - using simpler approach without EmbedPDF scroll hooks
-// import { PageTracker } from './PageTracker';
+import { PageObserver } from './PageObserver';
 import { useHybridLoader } from '../hooks/useHybridLoader';
+import { scrollTracker } from '../services/ScrollTrackerService';
 // Simplified storage - IndexedDB implementation commented out for debugging
 // import { useStorage } from '../hooks/useStorage';
 
@@ -67,14 +67,26 @@ export const PDFViewer = () => {
     error: contextError,
   } = useHybridLoader();
 
-  // Initialize IndexedDB storage for persistence - simplified inline version
+  // Initialize storage for persistence - simplified inline version
   const [storageReady, setStorageReady] = useState(false);
   const [storedPage, setStoredPage] = useState<number | null>(null);
   const [initialPage, setInitialPage] = useState<number | null>(null);
+  const [currentView, setCurrentView] = useState<{
+    pageNumber: number;
+    viewportProgress: number;
+    documentProgress: number;
+    totalPages: number;
+  }>({ pageNumber: 1, viewportProgress: 0, documentProgress: 0, totalPages: 4 });
   const storageError = null;
   const progress = storedPage ? { currentPage: storedPage } : null;
-  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
-  const pageHeightEstimate = useRef(800); // Will be updated on scroll
+
+  // Subscribe to ScrollTracker updates for UI display
+  useEffect(() => {
+    const unsubscribe = scrollTracker.subscribe((view) => {
+      setCurrentView(view);
+    });
+    return () => unsubscribe();
+  }, []);
 
   // Initialize storage on mount and restore scroll position
   useEffect(() => {
@@ -98,94 +110,51 @@ export const PDFViewer = () => {
     initStorage();
   }, []);
 
-  // Handle page change - save to localStorage
-  const handlePageChange = useCallback((page: number) => {
-    if (storageReady && page !== storedPage) {
-      localStorage.setItem('engram-pdf-page', String(page));
-      setStoredPage(page);
-      console.log('[Storage] Saved page:', page);
-    }
+  // Set total pages and sync currentView changes to localStorage
+  useEffect(() => {
+    const maxPages = 4; // We know this PDF has 4 pages
+    scrollTracker.setTotalPages(maxPages);
+
+    // Subscribe to view changes to persist page to localStorage
+    const unsubscribePersist = scrollTracker.subscribe((view) => {
+      if (storageReady && view.pageNumber !== storedPage) {
+        localStorage.setItem('engram-pdf-page', String(view.pageNumber));
+        setStoredPage(view.pageNumber);
+      }
+    });
+
+    return () => unsubscribePersist();
   }, [storageReady, storedPage]);
 
-  // Track scroll position to detect page changes
+  // Restore scroll position from localStorage (legacy scroll-based restore)
   useEffect(() => {
-    if (!storageReady) return;
+    if (!storageReady || !initialPage || initialPage <= 1) return;
 
-    let scrollContainer: HTMLDivElement | null = null;
-    let scrollHandler: (() => void) | null = null;
-
-    // Find the scrollable viewport container after PDF loads
-    const setupScrollTracking = () => {
-      // Find element with significant scrollable content
+    // Find scroll container and restore position
+    const restoreScrollPosition = () => {
       const allElements = Array.from(document.querySelectorAll('*')) as HTMLDivElement[];
-      scrollContainer = allElements.find(el => el.scrollHeight > el.clientHeight + 100) || null;
+      const scrollContainer = allElements.find(el => el.scrollHeight > el.clientHeight + 100);
+
       if (!scrollContainer) {
-        console.log('[Storage] No scroll container found, retrying...');
-        setTimeout(setupScrollTracking, 500);
+        setTimeout(restoreScrollPosition, 500);
         return;
       }
-      console.log('[Storage] Found scroll container:', scrollContainer.tagName, 'scrollHeight:', scrollContainer.scrollHeight);
 
-      scrollContainerRef.current = scrollContainer;
-
-      // Get page height estimate from canvas elements (each page is a canvas)
       const canvases = scrollContainer.querySelectorAll('canvas');
       if (canvases.length > 0) {
         const firstCanvas = canvases[0] as HTMLCanvasElement;
-        pageHeightEstimate.current = firstCanvas.offsetHeight + 20; // Include margin
-        console.log('[Storage] Page height estimate:', pageHeightEstimate.current);
-      }
+        const pageHeight = firstCanvas.offsetHeight + 20;
+        const scrollTarget = (initialPage - 1) * pageHeight;
 
-      // Track scroll changes
-      let hasRestoredPage = false;
-      scrollHandler = () => {
-        if (!scrollContainer) return;
-        const scrollTop = scrollContainer.scrollTop;
-
-        // Calculate current page based on scroll position
-        const currentPage = Math.floor(scrollTop / pageHeightEstimate.current) + 1;
-        const maxPages = 4; // We know this PDF has 4 pages
-        const clampedPage = Math.max(1, Math.min(currentPage, maxPages));
-
-        // Don't save during initial restore
-        if (!hasRestoredPage && initialPage && initialPage > 1) {
-          return;
-        }
-        handlePageChange(clampedPage);
-      };
-
-      scrollContainer.addEventListener('scroll', scrollHandler, { passive: true });
-
-      // Restore scroll position if we have a saved page
-      if (initialPage && initialPage > 1) {
-        const scrollTarget = (initialPage - 1) * pageHeightEstimate.current;
         console.log('[Storage] Restoring scroll to page', initialPage, 'position:', scrollTarget);
         scrollContainer.scrollTo({ top: scrollTarget, behavior: 'instant' });
-
-        // Mark as restored after a short delay to allow scroll to complete
-        setTimeout(() => {
-          hasRestoredPage = true;
-          setInitialPage(null);
-          // Update indicator to show restored page
-          handlePageChange(initialPage);
-        }, 100);
-      } else {
-        hasRestoredPage = true;
-        // Report initial page
-        scrollHandler();
+        setInitialPage(null);
       }
     };
 
-    // Wait longer for PDF to fully render before setting up scroll tracking
-    const timer = setTimeout(setupScrollTracking, 2500);
-
-    return () => {
-      clearTimeout(timer);
-      if (scrollContainer && scrollHandler) {
-        scrollContainer.removeEventListener('scroll', scrollHandler);
-      }
-    };
-  }, [storageReady, initialPage, handlePageChange]);
+    const timer = setTimeout(restoreScrollPosition, 2500);
+    return () => clearTimeout(timer);
+  }, [storageReady, initialPage]);
 
   // Load the context layer when component mounts
   useEffect(() => {
@@ -274,6 +243,18 @@ export const PDFViewer = () => {
             ? '❌ Storage Error'
             : '⏳ Initializing Storage...'}
         </div>
+        {/* Current View Status (ScrollTracker) */}
+        <div style={{
+          padding: '0.5rem 1rem',
+          borderRadius: '4px',
+          fontSize: '0.75rem',
+          fontFamily: 'monospace',
+          backgroundColor: '#e7f1ff',
+          color: '#004085',
+          border: '1px solid #b8daff',
+        }}>
+          {`📍 Page ${currentView.pageNumber} of ${currentView.totalPages} (${Math.round(currentView.documentProgress * 100)}%)`}
+        </div>
       </div>
       <EmbedPDF engine={engine} plugins={plugins}>
         {/* Page tracking disabled - using manual scroll observation instead */}
@@ -285,14 +266,17 @@ export const PDFViewer = () => {
         >
           <Scroller
             renderPage={({ width, height, pageIndex, scale, rotation }) => (
-              <div style={{ 
-                width, 
-                height, 
-                margin: 'auto', 
-                marginBottom: '1rem', 
-                position: 'relative',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-              }}>
+              <PageObserver
+                pageNumber={pageIndex + 1}
+                style={{
+                  width,
+                  height,
+                  margin: 'auto',
+                  marginBottom: '1rem',
+                  position: 'relative',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                }}
+              >
                 <PagePointerProvider pageWidth={width} pageHeight={height} pageIndex={pageIndex} scale={scale} rotation={rotation}>
                   <RenderLayer pageIndex={pageIndex} scale={scale} />
                   <SelectionLayer pageIndex={pageIndex} scale={scale} />
@@ -304,7 +288,7 @@ export const PDFViewer = () => {
                     rotation={rotation}
                   />
                 </PagePointerProvider>
-              </div>
+              </PageObserver>
             )}
           />
         </Viewport>

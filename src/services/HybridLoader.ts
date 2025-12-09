@@ -264,12 +264,20 @@ class HybridLoaderService {
 // Singleton instance
 export const hybridLoader = new HybridLoaderService();
 
+// Import types for window.Engram declaration
+import type { CurrentView } from './ScrollTrackerService';
+// Note: StorageServiceClass is imported dynamically to avoid circular deps
+
 // Expose on window.Engram for debugging and integration
 declare global {
   interface Window {
     Engram: {
       hybridLoader: HybridLoaderService;
       documentContext: DocumentContext | null;
+      /** Current view position - exposed by ScrollTrackerService */
+      currentView: CurrentView;
+      /** Storage service - exposed by StorageService */
+      storage: unknown; // Use unknown to avoid circular dependency
     };
   }
 }
